@@ -409,6 +409,7 @@ static zval* data_unserialize(const char *filename TSRMLS_DC)
 
     return retval;
 }
+/* }}} */
 
 static int apc_load_data(apc_cache_t* cache, const char *data_file TSRMLS_DC)
 {
@@ -989,6 +990,7 @@ PHP_APCU_API apc_cache_entry_t* apc_cache_exists(apc_cache_t* cache, char *strke
 PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, char *strkey, zend_uint keylen, apc_cache_updater_t updater, void* data TSRMLS_DC)
 {
     apc_cache_slot_t** slot;
+    apc_cache_entry_t tmp_entry;
 	
     zend_bool retval = 0;
     zend_ulong h, s;
@@ -1045,10 +1047,20 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, char *strkey, zend_u
 		/* set next slot */
         slot = &(*slot)->next;
 	}
-	
+
 	/* unlock header */
 	APC_UNLOCK(cache->header);
 
+    /* failed to find matching entry, create it */
+    MAKE_STD_ZVAL(tmp_entry.val);
+    ZVAL_LONG(tmp_entry.val, 0);
+    updater(cache, &tmp_entry, data);
+
+    if(apc_cache_store(cache, strkey, keylen, tmp_entry.val, 0, 0)) {
+        zval_ptr_dtor(&tmp_entry.val);
+        return 1;
+    }
+    zval_ptr_dtor(&tmp_entry.val);
     return 0;
 }
 /* }}} */
