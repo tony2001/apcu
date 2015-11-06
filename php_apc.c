@@ -518,7 +518,7 @@ PHP_FUNCTION(apcu_cache_info)
 /* }}} */
 #endif
 
-PHP_FUNCTION(apcu_key_info)
+PHP_FUNCTION(apcu_key_info) /* {{{ */
 {
     zval *stat;
     char *strkey;
@@ -533,6 +533,7 @@ PHP_FUNCTION(apcu_key_info)
     
     RETURN_ZVAL(stat, 0, 1);
 }
+/* }}} */
 
 /* {{{ proto array apc_sma_info([bool limited]) */
 PHP_FUNCTION(apcu_sma_info)
@@ -591,7 +592,7 @@ PHP_FUNCTION(apcu_sma_info)
 /* }}} */
 
 /* {{{ php_apc_update  */
-int php_apc_update(char *strkey, int strkey_len, apc_cache_updater_t updater, void* data TSRMLS_DC) 
+int php_apc_update(char *strkey, int strkey_len, apc_cache_updater_t updater, void* data, long ttl TSRMLS_DC) 
 {
     if (!APCG(enabled)) {
         return 0;
@@ -602,14 +603,14 @@ int php_apc_update(char *strkey, int strkey_len, apc_cache_updater_t updater, vo
         apc_cache_serializer(apc_user_cache, APCG(serializer_name) TSRMLS_CC);
     }
 
-    HANDLE_BLOCK_INTERRUPTIONS();
+    APC_HANDLE_BLOCK_INTERRUPTIONS();
     
-    if (!apc_cache_update(apc_user_cache, strkey, strkey_len + 1, updater, data TSRMLS_CC)) {
-        HANDLE_UNBLOCK_INTERRUPTIONS();
+    if (!apc_cache_update(apc_user_cache, strkey, strkey_len + 1, updater, data, ttl TSRMLS_CC)) {
+        APC_HANDLE_UNBLOCK_INTERRUPTIONS();
         return 0;
     }
 
-    HANDLE_UNBLOCK_INTERRUPTIONS();
+    APC_HANDLE_UNBLOCK_INTERRUPTIONS();
 
     return 1;
 }
@@ -743,8 +744,9 @@ PHP_FUNCTION(apcu_inc) {
     int strkey_len;
     struct php_inc_updater_args args = {1L, -1};
     zval *success = NULL;
+    long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|lz", &strkey, &strkey_len, &(args.step), &success) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|lzl", &strkey, &strkey_len, &(args.step), &success, &ttl) == FAILURE) {
         return;
     }
     
@@ -752,7 +754,7 @@ PHP_FUNCTION(apcu_inc) {
 		zval_dtor(success);
 	}
 
-    if (php_apc_update(strkey, strkey_len, php_inc_updater, &args TSRMLS_CC)) {
+    if (php_apc_update(strkey, strkey_len, php_inc_updater, &args, ttl TSRMLS_CC)) {
         if (success) {
 			ZVAL_TRUE(success);
 		}
@@ -775,8 +777,9 @@ PHP_FUNCTION(apcu_dec) {
     int strkey_len;
     struct php_inc_updater_args args = {1L, -1};
     zval *success = NULL;
+    long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|lz", &strkey, &strkey_len, &(args.step), &success) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|lzl", &strkey, &strkey_len, &(args.step), &success, &ttl) == FAILURE) {
         return;
     }
     
@@ -786,7 +789,7 @@ PHP_FUNCTION(apcu_dec) {
 
     args.step = args.step * -1;
 
-    if (php_apc_update(strkey, strkey_len, php_inc_updater, &args TSRMLS_CC)) {
+    if (php_apc_update(strkey, strkey_len, php_inc_updater, &args, ttl TSRMLS_CC)) {
         if (success) ZVAL_TRUE(success);
         RETURN_LONG(args.lval);
     }
@@ -823,12 +826,13 @@ PHP_FUNCTION(apcu_cas) {
     char *strkey;
     int strkey_len;
     long vals[2];
+    long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sll", &strkey, &strkey_len, &vals[0], &vals[1]) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sll|l", &strkey, &strkey_len, &vals[0], &vals[1], &ttl) == FAILURE) {
         return;
     }
 
-    if (php_apc_update(strkey, strkey_len, php_cas_updater, &vals TSRMLS_CC)) {
+    if (php_apc_update(strkey, strkey_len, php_cas_updater, &vals, ttl TSRMLS_CC)) {
 		RETURN_TRUE;
 	}
 
@@ -1441,6 +1445,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_apcu_inc, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, step)
     ZEND_ARG_INFO(1, success)
+    ZEND_ARG_INFO(0, ttl)
 ZEND_END_ARG_INFO()
 
 PHP_APC_ARGINFO
@@ -1448,6 +1453,7 @@ ZEND_BEGIN_ARG_INFO(arginfo_apcu_cas, 0)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, old)
     ZEND_ARG_INFO(0, new)
+    ZEND_ARG_INFO(0, ttl)
 ZEND_END_ARG_INFO()
 
 PHP_APC_ARGINFO

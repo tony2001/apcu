@@ -227,7 +227,8 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache,
                                         char *strkey,
                                         zend_uint keylen,
                                         apc_cache_updater_t updater,
-                                        void* data TSRMLS_DC);
+                                        void* data,
+                                        long ttl TSRMLS_DC);
 
 /*
  * apc_cache_find searches for a cache entry by its hashed identifier,

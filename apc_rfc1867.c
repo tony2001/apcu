@@ -156,7 +156,7 @@ int apc_rfc1867_progress(uint event, void *event_data, void **extra TSRMLS_DC) {
                 multipart_event_file_data *data = (multipart_event_file_data *) event_data;
                 RFC1867_DATA(bytes_processed) = data->post_bytes_processed;
                 if(RFC1867_DATA(bytes_processed) - RFC1867_DATA(prev_bytes_processed) > (uint) RFC1867_DATA(update_freq)) {
-                    if(!apc_cache_update(apc_user_cache, RFC1867_DATA(tracking_key), RFC1867_DATA(key_length), update_bytes_processed, &RFC1867_DATA(bytes_processed) TSRMLS_CC)) {
+                    if(!apc_cache_update(apc_user_cache, RFC1867_DATA(tracking_key), RFC1867_DATA(key_length), update_bytes_processed, &RFC1867_DATA(bytes_processed), 0 TSRMLS_CC)) {
                         ALLOC_INIT_ZVAL(track);
                         array_init(track);
                         add_assoc_long(track, "total", RFC1867_DATA(content_length));

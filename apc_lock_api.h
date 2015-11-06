@@ -28,6 +28,8 @@
 	the majority of Posix rwlock implementations
 */
 
+#include <signal.h>
+
 #ifndef PHP_WIN32
 # ifndef __USE_UNIX98
 #  define __USE_UNIX98
@@ -83,12 +85,21 @@ PHP_APCU_API zend_bool apc_lock_wunlock(apc_lock_t *lock TSRMLS_DC);
 PHP_APCU_API void apc_lock_destroy(apc_lock_t *lock TSRMLS_DC); /* }}} */
 
 /* {{{ generic locking macros */
+
+#define APC_HANDLE_BLOCK_INTERRUPTIONS() \
+		sigset_t oldmask, blockmask; \
+		sigfillset(&blockmask); \
+		sigprocmask(SIG_BLOCK, &blockmask, &oldmask)
+
+#define APC_HANDLE_UNBLOCK_INTERRUPTIONS() \
+		sigprocmask(SIG_SETMASK, &oldmask, NULL)
+
 #define CREATE_LOCK(lock)     apc_lock_create(lock TSRMLS_CC)
 #define DESTROY_LOCK(lock)    apc_lock_destroy(lock TSRMLS_CC)
-#define WLOCK(lock)           { HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_wlock(lock TSRMLS_CC); }
-#define WUNLOCK(lock)         { apc_lock_wunlock(lock TSRMLS_CC); HANDLE_UNBLOCK_INTERRUPTIONS(); }
-#define RLOCK(lock)           { HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_rlock(lock TSRMLS_CC); }
-#define RUNLOCK(lock)         { apc_lock_runlock(lock TSRMLS_CC); HANDLE_UNBLOCK_INTERRUPTIONS(); }
+#define WLOCK(lock)           APC_HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_wlock(lock TSRMLS_CC);
+#define WUNLOCK(lock)         apc_lock_wunlock(lock TSRMLS_CC); APC_HANDLE_UNBLOCK_INTERRUPTIONS();
+#define RLOCK(lock)           APC_HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_rlock(lock TSRMLS_CC);
+#define RUNLOCK(lock)         apc_lock_runlock(lock TSRMLS_CC); APC_HANDLE_UNBLOCK_INTERRUPTIONS();
 #define LOCK                  WLOCK
 #define UNLOCK                WUNLOCK
 /* }}} */
