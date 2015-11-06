@@ -220,7 +220,7 @@ PHP_APCU_API zend_bool apc_cache_store(apc_cache_t* cache,
 /*
 * apc_cache_update updates an entry in place, this is used for inc/dec/cas
 */
-PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, apc_cache_updater_t updater, void* data);
+PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, apc_cache_updater_t updater, void* data, zend_long ttl);
 
 /*
  * apc_cache_find searches for a cache entry by its hashed identifier,

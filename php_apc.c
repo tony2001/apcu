@@ -440,7 +440,7 @@ PHP_FUNCTION(apcu_sma_info)
 /* }}} */
 
 /* {{{ php_apc_update  */
-int php_apc_update(zend_string *key, apc_cache_updater_t updater, void* data) 
+int php_apc_update(zend_string *key, apc_cache_updater_t updater, void* data, zend_long ttl) 
 {
     if (!APCG(enabled)) {
         return 0;
@@ -451,7 +451,7 @@ int php_apc_update(zend_string *key, apc_cache_updater_t updater, void* data)
         apc_cache_serializer(apc_user_cache, APCG(serializer_name));
     }
     
-    if (!apc_cache_update(apc_user_cache, key, updater, data)) {
+    if (!apc_cache_update(apc_user_cache, key, updater, data, ttl)) {
         return 0;
     }
 
@@ -573,8 +573,9 @@ PHP_FUNCTION(apcu_inc) {
     struct php_inc_updater_args args;
     zend_long step = 1;
     zval *success = NULL;
+    zend_long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lz", &key, &step, &success) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lzl", &key, &step, &success, &ttl) == FAILURE) {
         return;
     }
 
@@ -585,7 +586,7 @@ PHP_FUNCTION(apcu_inc) {
 
 	ZVAL_LONG(&args.step, step);
 
-    if (php_apc_update(key, php_inc_updater, &args)) {
+    if (php_apc_update(key, php_inc_updater, &args, ttl)) {
         if (success) {
 			ZVAL_TRUE(success);
 		}
@@ -607,8 +608,9 @@ PHP_FUNCTION(apcu_dec) {
     struct php_inc_updater_args args;
     zend_long step = 1;
     zval *success = NULL;
+    zend_long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lz", &key, &step, &success) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|lzl", &key, &step, &success, &ttl) == FAILURE) {
         return;
     }
 
@@ -619,7 +621,7 @@ PHP_FUNCTION(apcu_dec) {
 
 	ZVAL_LONG(&args.step, 0 - step);
 
-    if (php_apc_update(key, php_inc_updater, &args)) {
+    if (php_apc_update(key, php_inc_updater, &args, ttl)) {
         if (success) {
 			ZVAL_TRUE(success);
 		}
@@ -657,12 +659,13 @@ static zend_bool php_cas_updater(apc_cache_t* cache, apc_cache_entry_t* entry, v
 PHP_FUNCTION(apcu_cas) {
     zend_string *key;
     zend_long vals[2];
+    zend_long ttl = 0;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sll", &key, &vals[0], &vals[1]) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sll|l", &key, &vals[0], &vals[1], &ttl) == FAILURE) {
         return;
     }
 
-    if (php_apc_update(key, php_cas_updater, &vals)) {
+    if (php_apc_update(key, php_cas_updater, &vals, ttl)) {
 		RETURN_TRUE;
 	}
 
@@ -866,7 +869,6 @@ PHP_FUNCTION(apcu_entry) {
 	
 	apc_cache_entry(apc_user_cache, key, &fci, &fcc, ttl, now, return_value);	
 }
-/* }}} */
 
 /* {{{ apcu_functions[] */
 zend_function_entry apcu_functions[] = {

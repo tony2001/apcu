@@ -1050,7 +1050,7 @@ PHP_APCU_API apc_cache_entry_t* apc_cache_exists(apc_cache_t* cache, zend_string
 /* }}} */
 
 /* {{{ apc_cache_update */
-PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, apc_cache_updater_t updater, void* data)
+PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, apc_cache_updater_t updater, void* data, zend_long ttl)
 {
     apc_cache_slot_t** slot;
     apc_cache_entry_t tmp_entry;
@@ -1114,7 +1114,7 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, ap
 	ZVAL_LONG(&tmp_entry.val, 0);
 	updater(cache, &tmp_entry, data);
 
-	if(apc_cache_store(cache, key, &tmp_entry.val, 0, 0)) {
+	if(apc_cache_store(cache, key, &tmp_entry.val, (int32_t)ttl, 0)) {
 		return 1;
 	}
 
