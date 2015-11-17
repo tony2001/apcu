@@ -84,12 +84,21 @@ PHP_APCU_API zend_bool apc_lock_wunlock(apc_lock_t *lock);
 PHP_APCU_API void apc_lock_destroy(apc_lock_t *lock); /* }}} */
 
 /* {{{ generic locking macros */
+
+#define APC_HANDLE_BLOCK_INTERRUPTIONS() \
+		sigset_t oldmask, blockmask; \
+		sigfillset(&blockmask); \
+		sigprocmask(SIG_BLOCK, &blockmask, &oldmask)
+
+#define APC_HANDLE_UNBLOCK_INTERRUPTIONS() \
+		sigprocmask(SIG_SETMASK, &oldmask, NULL)
+
 #define CREATE_LOCK(lock)     apc_lock_create(lock)
 #define DESTROY_LOCK(lock)    apc_lock_destroy(lock)
-#define WLOCK(lock)           { HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_wlock(lock); }
-#define WUNLOCK(lock)         { apc_lock_wunlock(lock); HANDLE_UNBLOCK_INTERRUPTIONS(); }
-#define RLOCK(lock)           { HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_rlock(lock); }
-#define RUNLOCK(lock)         { apc_lock_runlock(lock); HANDLE_UNBLOCK_INTERRUPTIONS(); }
+#define WLOCK(lock)           APC_HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_wlock(lock);
+#define WUNLOCK(lock)         apc_lock_wunlock(lock); APC_HANDLE_UNBLOCK_INTERRUPTIONS();
+#define RLOCK(lock)           APC_HANDLE_BLOCK_INTERRUPTIONS(); apc_lock_rlock(lock);
+#define RUNLOCK(lock)         apc_lock_runlock(lock); APC_HANDLE_UNBLOCK_INTERRUPTIONS();
 #define LOCK                  WLOCK
 #define UNLOCK                WUNLOCK
 /* }}} */
