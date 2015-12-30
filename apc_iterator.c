@@ -197,6 +197,7 @@ static int apc_iterator_fetch_active(apc_iterator_t *iterator) {
     apc_cache_slot_t **slot;
     apc_iterator_item_t *item;
     time_t t;
+	APC_DECLARE_VARS();
 
     t = apc_time();
 
@@ -235,6 +236,7 @@ static int apc_iterator_fetch_deleted(apc_iterator_t *iterator) {
     int count=0;
     apc_cache_slot_t **slot;
     apc_iterator_item_t *item;
+	APC_DECLARE_VARS();
 
     php_apc_try(APC_RLOCK(apc_user_cache->header), {
 		slot = &apc_user_cache->header->gc;
@@ -267,6 +269,7 @@ static int apc_iterator_fetch_deleted(apc_iterator_t *iterator) {
 static void apc_iterator_totals(apc_iterator_t *iterator) {
     apc_cache_slot_t **slot;
     int i;
+	APC_DECLARE_VARS();
 
     php_apc_try(APC_RLOCK(apc_user_cache->header), {
 		for (i=0; i < apc_user_cache->nslots; i++) {

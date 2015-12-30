@@ -445,11 +445,13 @@ static inline zend_bool apc_cache_store_internal(apc_cache_t *cache, zend_string
 static inline apc_cache_entry_t* apc_cache_find_internal(apc_cache_t *cache, zend_string *key, time_t t, zend_bool lock) {
 	apc_cache_slot_t** slot;
 	zend_ulong h, s;
+	APC_DECLARE_VARS();
 
     volatile apc_cache_entry_t* value = NULL;
 
-	if (lock)
+	if (lock) {
 		APC_RLOCK(cache->header);
+	}
     
 	/* calculate hash and slot */
 	apc_cache_hash_slot(cache, key, &h, &s);
@@ -459,7 +461,7 @@ static inline apc_cache_entry_t* apc_cache_find_internal(apc_cache_t *cache, zen
 
 	while (*slot) {
 		/* check for a matching key by has and identifier */
-		if ((h == ZSTR_HASH((*slot)->key.str)) && 
+		if ((h == ZSTR_HASH((*slot)->key.str)) && ZSTR_LEN((*slot)->key.str) == ZSTR_LEN(key) && 
 			memcmp(ZSTR_VAL((*slot)->key.str), ZSTR_VAL(key), ZSTR_LEN(key)) == SUCCESS) {
 
 			/* Check to make sure this entry isn't expired by a hard TTL */
@@ -742,6 +744,8 @@ PHP_APCU_API void apc_cache_real_expunge(apc_cache_t* cache) {
 /* {{{ apc_cache_clear */
 PHP_APCU_API void apc_cache_clear(apc_cache_t* cache)
 {
+	APC_DECLARE_VARS();
+
 	/* check there is a cache and it is not busy */
     if(!cache || apc_cache_busy(cache)) {
 		return;
@@ -774,6 +778,7 @@ PHP_APCU_API void apc_cache_default_expunge(apc_cache_t* cache, size_t size)
     time_t t;
 	size_t suitable = 0L;
     size_t available = 0L;
+	APC_DECLARE_VARS();
 
     t = apc_time();
 
@@ -942,6 +947,7 @@ PHP_APCU_API zend_bool apc_cache_insert(apc_cache_t* cache,
                                         zend_bool exclusive)
 {
 	zend_bool result = 0;
+	APC_DECLARE_VARS();
 
 	php_apc_try(APC_LOCK(cache->header), {
 		result = apc_cache_insert_internal(
@@ -963,7 +969,6 @@ PHP_APCU_API apc_cache_entry_t* apc_cache_find(apc_cache_t* cache, zend_string *
     }
 
 	entry = apc_cache_find_internal(cache, key, t, 1);
-
 	return entry;
 }
 /* }}} */
@@ -1003,6 +1008,7 @@ PHP_APCU_API apc_cache_entry_t* apc_cache_exists(apc_cache_t* cache, zend_string
 	
 		volatile apc_cache_entry_t* value = NULL;
 		zend_ulong h, s;
+		APC_DECLARE_VARS();
 
         /* get hash and slot */
 		apc_cache_hash_slot(cache, key, &h, &s);
@@ -1015,7 +1021,7 @@ PHP_APCU_API apc_cache_entry_t* apc_cache_exists(apc_cache_t* cache, zend_string
 
 		while (*slot) {
 			/* check for match by hash and identifier */
-			if ((h == ZSTR_HASH((*slot)->key.str)) &&
+			if ((h == ZSTR_HASH((*slot)->key.str)) && ZSTR_LEN((*slot)->key.str) == ZSTR_LEN(key) &&
 				memcmp(ZSTR_VAL((*slot)->key.str), ZSTR_VAL(key), ZSTR_LEN(key)) == SUCCESS) {
 
 				/* Check to make sure this entry isn't expired by a hard TTL */
@@ -1054,6 +1060,7 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, ap
 {
     apc_cache_slot_t** slot;
     apc_cache_entry_t tmp_entry;
+	APC_DECLARE_VARS();
 	
     zend_bool retval = 0;
     zend_ulong h, s;
@@ -1074,7 +1081,7 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, ap
 
 		while (*slot) {
 			/* check for a match by hash and identifier */
-		    if ((h == ZSTR_HASH((*slot)->key.str)) &&
+		    if ((h == ZSTR_HASH((*slot)->key.str)) && ZSTR_LEN((*slot)->key.str) == ZSTR_LEN(key) &&
 		        memcmp(ZSTR_VAL((*slot)->key.str), ZSTR_VAL(key), ZSTR_LEN(key)) == SUCCESS) {
 				/* attempt to perform update */
 		        switch(Z_TYPE((*slot)->value->val)) {
@@ -1126,6 +1133,7 @@ PHP_APCU_API zend_bool apc_cache_update(apc_cache_t* cache, zend_string *key, ap
 PHP_APCU_API zend_bool apc_cache_delete(apc_cache_t* cache, zend_string *key)
 {
     apc_cache_slot_t** slot;
+	APC_DECLARE_VARS();
 	
     zend_ulong h, s;
 
@@ -1144,7 +1152,7 @@ PHP_APCU_API zend_bool apc_cache_delete(apc_cache_t* cache, zend_string *key)
 
     while (*slot) {
 		/* check for a match by hash and identifier */
-        if ((h == ZSTR_HASH((*slot)->key.str)) && 
+        if ((h == ZSTR_HASH((*slot)->key.str)) && ZSTR_LEN((*slot)->key.str) == ZSTR_LEN(key) &&
             memcmp(ZSTR_VAL((*slot)->key.str), ZSTR_VAL(key), ZSTR_LEN(key)) == SUCCESS) {
 			/* executing removal */
             apc_cache_remove_slot(
@@ -1715,6 +1723,7 @@ PHP_APCU_API zval apc_cache_info(apc_cache_t* cache, zend_bool limited)
     zval slots;
     apc_cache_slot_t* p;
     zend_ulong i, j;
+	APC_DECLARE_VARS();
 
     if (!cache) {
 		ZVAL_NULL(&info);
@@ -1781,6 +1790,7 @@ PHP_APCU_API zval apc_cache_info(apc_cache_t* cache, zend_bool limited)
 PHP_APCU_API zval* apc_cache_stat(apc_cache_t* cache, zend_string *key, zval *stat) {
     apc_cache_slot_t** slot;
 	zend_ulong h, s;
+	APC_DECLARE_VARS();
 
 	/* calculate hash and slot */
 	apc_cache_hash_slot(cache, key, &h, &s);
@@ -1791,15 +1801,15 @@ PHP_APCU_API zval* apc_cache_stat(apc_cache_t* cache, zend_string *key, zval *st
 
 		while (*slot) {
 			/* check for a matching key by has and identifier */
-			if ((h == ZSTR_HASH((*slot)->key.str)) && 
+			if ((h == ZSTR_HASH((*slot)->key.str)) && ZSTR_LEN((*slot)->key.str) == ZSTR_LEN(key) &&
 				memcmp(ZSTR_VAL((*slot)->key.str), ZSTR_VAL(key), ZSTR_LEN(key)) == SUCCESS) {
-		        array_init(stat);
-		        
-		        add_assoc_long(stat, "hits",  (*slot)->nhits);
-		        add_assoc_long(stat, "access_time", (*slot)->atime);
-		        add_assoc_long(stat, "mtime", (*slot)->key.mtime);
-		        add_assoc_long(stat, "creation_time", (*slot)->ctime);
-		        add_assoc_long(stat, "deletion_time", (*slot)->dtime);
+				array_init(stat);
+				
+				add_assoc_long(stat, "hits",  (*slot)->nhits);
+				add_assoc_long(stat, "access_time", (*slot)->atime);
+				add_assoc_long(stat, "mtime", (*slot)->key.mtime);
+				add_assoc_long(stat, "creation_time", (*slot)->ctime);
+				add_assoc_long(stat, "deletion_time", (*slot)->dtime);
 				add_assoc_long(stat, "ttl",   (*slot)->value->ttl);
 				add_assoc_long(stat, "refs",  (*slot)->value->ref_count);
 			
@@ -1895,6 +1905,7 @@ PHP_APCU_API void apc_cache_serializer(apc_cache_t* cache, const char* name) {
 
 PHP_APCU_API void apc_cache_entry(apc_cache_t *cache, zval *key, zend_fcall_info *fci, zend_fcall_info_cache *fcc, zend_long ttl, zend_long now, zval *return_value) {/*{{{*/
 	apc_cache_entry_t *entry = NULL;
+	APC_DECLARE_VARS();
 
 	if(!cache || apc_cache_busy(cache)) {
         return;

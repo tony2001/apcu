@@ -376,6 +376,7 @@ PHP_APCU_API void* apc_sma_api_malloc_ex(apc_sma_t* sma, zend_ulong n, zend_ulon
 	size_t off;
     uint i;
     int nuked = 0;
+    APC_DECLARE_VARS();
 
 restart:
     assert(sma->initialized);
@@ -478,6 +479,7 @@ PHP_APCU_API char* apc_sma_api_strdup(apc_sma_t* sma, const char* s) {
 PHP_APCU_API void apc_sma_api_free(apc_sma_t* sma, void* p) {
 	uint i;
     size_t offset;
+    APC_DECLARE_VARS();
 
     if (p == NULL) {
         return;
@@ -564,6 +566,7 @@ PHP_APCU_API apc_sma_info_t* apc_sma_api_info(apc_sma_t* sma, zend_bool limited)
     uint i;
     char* shmaddr;
     block_t* prv;
+    APC_DECLARE_VARS();
 
     if (!sma->initialized) {
         return NULL;

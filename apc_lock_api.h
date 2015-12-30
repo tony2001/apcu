@@ -85,8 +85,10 @@ PHP_APCU_API void apc_lock_destroy(apc_lock_t *lock); /* }}} */
 
 /* {{{ generic locking macros */
 
+#define APC_DECLARE_VARS() \
+	sigset_t oldmask, blockmask
+
 #define APC_HANDLE_BLOCK_INTERRUPTIONS() \
-		sigset_t oldmask, blockmask; \
 		sigfillset(&blockmask); \
 		sigprocmask(SIG_BLOCK, &blockmask, &oldmask)
 
