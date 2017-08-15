@@ -123,6 +123,7 @@ PHP_APCU_API zend_bool apc_lock_init() {
 	    if (pthread_mutexattr_init(&apc_lock_attr) == SUCCESS) {
 		    if (pthread_mutexattr_setpshared(&apc_lock_attr, PTHREAD_PROCESS_SHARED) == SUCCESS) {
 			    pthread_mutexattr_settype(&apc_lock_attr, PTHREAD_MUTEX_RECURSIVE);
+			    pthread_mutexattr_settype(&apc_lock_attr, PTHREAD_MUTEX_ROBUST);
 			    return 1;
 		    }
 	    }
@@ -213,7 +214,11 @@ PHP_APCU_API zend_bool apc_lock_rlock(apc_lock_t *lock) {
 #ifndef APC_SPIN_LOCK
 # ifndef APC_FCNTL_LOCK
 #   ifdef APC_LOCK_RECURSIVE
-	    pthread_mutex_lock(lock);
+        int err = pthread_mutex_lock(lock);
+        if (err == EOWNERDEAD) {
+            /* can't really check all the data, can we? */
+            pthread_mutex_consistent(lock);
+        }
 #   else
 	    pthread_rwlock_rdlock(lock);
 #   endif    
